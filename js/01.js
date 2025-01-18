@@ -1,14 +1,14 @@
 const scene = new THREE.Scene();
-let perspectiveCamera = new THREE.PerspectiveCamera(30,
+let camera1 = new THREE.PerspectiveCamera(30,
   window.innerWidth / window.innerHeight, 0.1, 1000);
 let orthographicCamera = new THREE.OrthographicCamera(0, window.innerWidth, 0, window.innerHeight, 0.1, 1000);
 
-const renderer = new THREE.WebGLRenderer();
-renderer.setSize(window.innerWidth, window.innerHeight);
-renderer.setClearColor(new THREE.Color(0xEEEEEE));
-document.body.appendChild(renderer.domElement);
+const renderer1 = new THREE.WebGLRenderer();
+renderer1.setSize(window.innerWidth, window.innerHeight);
+renderer1.setClearColor(new THREE.Color(0xEEEEEE));
+document.body.appendChild(renderer1.domElement);
 
-let controls = new THREE.OrbitControls(perspectiveCamera, renderer.domElement);
+let controls = new THREE.OrbitControls(camera1, renderer1.domElement);
 controls.addEventListener('change', (o) => {
   gui.updateDisplay();
 });
@@ -29,10 +29,10 @@ const curve = new THREE.EllipseCurve(
   0
 );
 const curveGeometry = new THREE.BufferGeometry().setFromPoints(curve.getPoints(64));
-const curveMaterial = new THREE.LineBasicMaterial({ color: 0xbbbbbb});
-const curveMaterial2 = new THREE.LineBasicMaterial({ color: 0xbbbbbb});
-const curveMaterial3 = new THREE.LineBasicMaterial({ color: 0xbbbbbb});
-for (let i=0; i<18; i++) {
+const curveMaterial = new THREE.LineBasicMaterial({ color: 0xbbbbbb });
+const curveMaterial2 = new THREE.LineBasicMaterial({ color: 0xbbbbbb });
+const curveMaterial3 = new THREE.LineBasicMaterial({ color: 0xbbbbbb });
+for (let i = 0; i < 18; i++) {
   const ellipse1 = new THREE.Line(curveGeometry, curveMaterial);
   const ellipse2 = new THREE.Line(curveGeometry, curveMaterial2);
   const ellipse3 = new THREE.Line(curveGeometry, curveMaterial3);
@@ -45,15 +45,15 @@ for (let i=0; i<18; i++) {
   scene.add(ellipse3);
 }
 
-perspectiveCamera.position.x = 14;
-perspectiveCamera.position.y = 11;
-perspectiveCamera.position.z = 15;
-perspectiveCamera.lookAt(new THREE.Vector3(0, 0, 0));
+camera1.position.x = 14;
+camera1.position.y = 11;
+camera1.position.z = 15;
+camera1.lookAt(new THREE.Vector3(0, 0, 0));
 
 const guiObj = {
-  'fov' : perspectiveCamera.fov,
-  'color' : "#c2dc94",
-  'camera' : 14,
+  'fov': camera1.fov,
+  'color': "#c2dc94",
+  'camera': 14,
   'camera_x': 0,
 };
 
@@ -66,30 +66,30 @@ const gui = new dat.GUI();
 //       break;
 //   }
 // });
-gui.add(perspectiveCamera.position, 'x', -500, 500).step(1).onChange((v) => {
-  perspectiveCamera.lookAt(new THREE.Vector3(0, 0, 0));
+gui.add(camera1.position, 'x', -500, 500).step(1).onChange((v) => {
+  camera1.lookAt(new THREE.Vector3(0, 0, 0));
 });
-gui.add(perspectiveCamera.position, 'y', -500, 500).step(1).onChange((v) => {
-  perspectiveCamera.lookAt(new THREE.Vector3(0, 0, 0));
+gui.add(camera1.position, 'y', -500, 500).step(1).onChange((v) => {
+  camera1.lookAt(new THREE.Vector3(0, 0, 0));
 });
-gui.add(perspectiveCamera.position, 'z', 0, 500).step(1).onChange((v) => {
-  perspectiveCamera.lookAt(new THREE.Vector3(0, 0, 0));
+gui.add(camera1.position, 'z', 0, 500).step(1).onChange((v) => {
+  camera1.lookAt(new THREE.Vector3(0, 0, 0));
 });
 gui.add(guiObj, 'fov', 0, 200).step(1).onChange((v) => {
-  perspectiveCamera.fov = v;
-  perspectiveCamera.updateProjectionMatrix();
+  camera1.fov = v;
+  camera1.updateProjectionMatrix();
 });
 // gui.addColor(guiObj, 'color').onChange(setColor);
 
-function setColor() {
-  console.log(guiObj.color);
-  sphere.color = guiObj.color;
-}
+// function setColor() {
+//   console.log(guiObj.color);
+//   sphere.color = guiObj.color;
+// }
 
 function animate() {
   requestAnimationFrame(animate);
 
-  renderer.render(scene, perspectiveCamera);
+  renderer1.render(scene, camera1);
 }
 
 animate();
