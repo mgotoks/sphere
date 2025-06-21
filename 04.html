@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>04 - 二層球体の自由回転制御</title>
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+      font-family: Arial, sans-serif;
+    }
+
+    #info {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      color: #333;
+      background: rgba(255, 255, 255, 0.8);
+      padding: 10px;
+      border-radius: 5px;
+      font-size: 12px;
+      max-width: 300px;
+      z-index: 100;
+    }
+
+    #info h3 {
+      margin: 0 0 10px 0;
+      color: #555;
+    }
+
+    #info ul {
+      margin: 5px 0;
+      padding-left: 15px;
+    }
+
+    #info li {
+      margin: 2px 0;
+    }
+
+    .key {
+      background: #eee;
+      padding: 2px 4px;
+      border-radius: 3px;
+      font-weight: bold;
+    }
+  </style>
+</head>
+
+<body>
+  <div id="info">
+    <h3>🎮 操作方法</h3>
+    <ul>
+      <li><strong>通常ドラッグ:</strong> 球B回転 → 球A回転</li>
+      <li><span class="key">Shift</span> + ドラッグ: 球A単独回転</li>
+      <li><span class="key">Ctrl</span> + ドラッグ: 球B単独回転</li>
+      <li><span class="key">Alt</span> + ドラッグ: 両方同時回転</li>
+      <li><strong>マウスホイール:</strong> ズーム</li>
+    </ul>
+    <p><strong>📱 タッチ:</strong> シングルタッチで回転、ピンチでズーム</p>
+    <p><strong>⚙️ GUI:</strong> 右上のパネルで詳細設定</p>
+  </div>
+
+  <script src="js/three.min.js"></script>
+  <script src="js/dat.gui.min.js"></script>
+  <script src="js/04.js"></script>
+</body>
+
+</html>
