@@ -187,11 +187,50 @@ function syncSpheresToB() {
   ellipsesGroup.rotation.copy(latitudeLines.rotation);
 }
 
+// 球Aの回転を球Bの座標系に変換する関数
+function transformSphereAToSphereBAxis() {
+  // 球Bの回転行列を取得
+  const sphereBMatrix = new THREE.Matrix4();
+  sphereBMatrix.makeRotationFromEuler(new THREE.Euler(
+    latitudeLines.rotation.x,
+    latitudeLines.rotation.y,
+    latitudeLines.rotation.z,
+    'XYZ'
+  ));
+
+  // 球Aの現在の回転から相対回転を計算
+  const relativeRotation = new THREE.Euler(
+    rotationOffsetX,
+    rotationOffsetY,
+    rotationOffsetZ,
+    'XYZ'
+  );
+
+  // 相対回転行列を作成
+  const relativeMatrix = new THREE.Matrix4();
+  relativeMatrix.makeRotationFromEuler(relativeRotation);
+
+  // 球Bの回転軸上で相対回転を適用
+  const finalMatrix = new THREE.Matrix4();
+  finalMatrix.multiplyMatrices(sphereBMatrix, relativeMatrix);
+
+  // 最終的な回転をオイラー角に変換
+  const finalEuler = new THREE.Euler();
+  finalEuler.setFromRotationMatrix(finalMatrix, 'XYZ');
+
+  return finalEuler;
+}
+
 // マウス操作の変数
 let isDragging = false;
 let dragTarget = null; // 'sphereA', 'sphereB', または null
 let previousMousePosition = { x: 0, y: 0 };
 const rotationSpeed = 0.005;
+
+// 回転軸同期のための変数
+let rotationOffsetX = 0;
+let rotationOffsetY = 0;
+let rotationOffsetZ = 0;
 
 // キーボード状態の管理
 const keys = {
@@ -253,6 +292,36 @@ renderer.domElement.addEventListener('mousedown', (e) => {
     // デフォルトの動作：両方操作可能なら両方回転、そうでなければ優先順位に基づいて決定
     if (!guiParams.lockSphereA && !guiParams.lockSphereB) {
       dragTarget = 'both';
+      // 両方回転の開始時に球Aと球Bの相対回転を記録
+      // 球Bの逆回転行列を作成
+      const sphereBInverseMatrix = new THREE.Matrix4();
+      sphereBInverseMatrix.makeRotationFromEuler(new THREE.Euler(
+        -latitudeLines.rotation.x,
+        -latitudeLines.rotation.y,
+        -latitudeLines.rotation.z,
+        'ZYX' // 逆順で適用
+      ));
+
+      // 球Aの現在の回転行列を作成
+      const sphereAMatrix = new THREE.Matrix4();
+      sphereAMatrix.makeRotationFromEuler(new THREE.Euler(
+        ellipsesGroup.rotation.x,
+        ellipsesGroup.rotation.y,
+        ellipsesGroup.rotation.z,
+        'XYZ'
+      ));
+
+      // 相対回転行列を計算 (sphereA相対于sphereB)
+      const relativeMatrix = new THREE.Matrix4();
+      relativeMatrix.multiplyMatrices(sphereBInverseMatrix, sphereAMatrix);
+
+      // 相対回転をオイラー角で保存
+      const relativeEuler = new THREE.Euler();
+      relativeEuler.setFromRotationMatrix(relativeMatrix, 'XYZ');
+
+      rotationOffsetX = relativeEuler.x;
+      rotationOffsetY = relativeEuler.y;
+      rotationOffsetZ = relativeEuler.z;
     } else if (!guiParams.lockSphereB) {
       dragTarget = 'sphereB';
     } else if (!guiParams.lockSphereA) {
@@ -283,10 +352,13 @@ renderer.domElement.addEventListener('mousemove', (e) => {
         latitudeLines.rotation.y += deltaY;
         break;
       case 'both':
-        ellipsesGroup.rotation.x += deltaX;
-        ellipsesGroup.rotation.y += deltaY;
+        // 両方回転の場合：球Bを回転し、球Aは球Bの回転軸に沿って相対位置を保ったまま回転
         latitudeLines.rotation.x += deltaX;
         latitudeLines.rotation.y += deltaY;
+
+        // 球Aを球Bの回転軸上で回転させる
+        const transformedRotation = transformSphereAToSphereBAxis();
+        ellipsesGroup.rotation.copy(transformedRotation);
         break;
     }
 
@@ -325,6 +397,36 @@ renderer.domElement.addEventListener('touchstart', (e) => {
     // タッチでのデフォルト操作対象：両方操作可能なら両方回転
     if (!guiParams.lockSphereA && !guiParams.lockSphereB) {
       touchTarget = 'both';
+      // 両方回転の開始時に球Aと球Bの相対回転を記録
+      // 球Bの逆回転行列を作成
+      const sphereBInverseMatrix = new THREE.Matrix4();
+      sphereBInverseMatrix.makeRotationFromEuler(new THREE.Euler(
+        -latitudeLines.rotation.x,
+        -latitudeLines.rotation.y,
+        -latitudeLines.rotation.z,
+        'ZYX' // 逆順で適用
+      ));
+
+      // 球Aの現在の回転行列を作成
+      const sphereAMatrix = new THREE.Matrix4();
+      sphereAMatrix.makeRotationFromEuler(new THREE.Euler(
+        ellipsesGroup.rotation.x,
+        ellipsesGroup.rotation.y,
+        ellipsesGroup.rotation.z,
+        'XYZ'
+      ));
+
+      // 相対回転行列を計算
+      const relativeMatrix = new THREE.Matrix4();
+      relativeMatrix.multiplyMatrices(sphereBInverseMatrix, sphereAMatrix);
+
+      // 相対回転をオイラー角で保存
+      const relativeEuler = new THREE.Euler();
+      relativeEuler.setFromRotationMatrix(relativeMatrix, 'XYZ');
+
+      rotationOffsetX = relativeEuler.x;
+      rotationOffsetY = relativeEuler.y;
+      rotationOffsetZ = relativeEuler.z;
     } else if (!guiParams.lockSphereB) {
       touchTarget = 'sphereB';
     } else if (!guiParams.lockSphereA) {
@@ -357,10 +459,13 @@ renderer.domElement.addEventListener('touchmove', (e) => {
       latitudeLines.rotation.x += deltaX;
       latitudeLines.rotation.y += deltaY;
     } else if (touchTarget === 'both') {
-      ellipsesGroup.rotation.x += deltaX;
-      ellipsesGroup.rotation.y += deltaY;
+      // 両方回転の場合：球Bを回転し、球Aは球Bの回転軸に沿って相対位置を保ったまま回転
       latitudeLines.rotation.x += deltaX;
       latitudeLines.rotation.y += deltaY;
+
+      // 球Aを球Bの回転軸上で回転させる
+      const transformedRotation = transformSphereAToSphereBAxis();
+      ellipsesGroup.rotation.copy(transformedRotation);
     }
 
     previousMousePosition = { x: e.touches[0].clientX, y: e.touches[0].clientY };
@@ -386,17 +491,19 @@ renderer.domElement.addEventListener('touchend', () => {
 console.log(`
 === 04.js 操作方法 ===
 マウス操作:
-- 通常ドラッグ: 両方操作可能なら両方回転、そうでなければ球B優先→球A
+- 通常ドラッグ: 両方操作可能なら両方回転（球Aは球Bの回転軸に沿って回転）
 - Shift + ドラッグ: 球A単独回転（球A固定時は無効）
 - Ctrl + ドラッグ: 球B単独回転（球B固定時は無効）
 - マウスホイール: ズーム
 
 タッチ操作:
-- シングルタッチドラッグ: 両方操作可能なら両方回転、そうでなければ球B優先→球A
+- シングルタッチドラッグ: 両方操作可能なら両方回転（球Aは球Bの回転軸に沿って回転）
 - ピンチ: ズーム
 
 キーボード:
 - H キー: 操作方法パネルの表示/非表示切り替え
+
+※ 球A単独回転後、両方同時回転では球Aが球Bの回転軸上で形状を保ったまま回転します
 `);
 
 // アニメーションループ
