@@ -45,25 +45,95 @@
       border-radius: 3px;
       font-weight: bold;
     }
+
+    .close-btn {
+      position: absolute;
+      top: 5px;
+      right: 8px;
+      background: none;
+      border: none;
+      font-size: 16px;
+      cursor: pointer;
+      color: #666;
+      padding: 0;
+      width: 20px;
+      height: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .close-btn:hover {
+      color: #000;
+      background: rgba(0, 0, 0, 0.1);
+      border-radius: 50%;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    #toggle-info {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      background: rgba(255, 255, 255, 0.8);
+      border: none;
+      padding: 8px 12px;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 12px;
+      color: #333;
+      z-index: 101;
+    }
+
+    #toggle-info:hover {
+      background: rgba(255, 255, 255, 0.9);
+    }
   </style>
 </head>
 
 <body>
+  <!-- 操作方法表示のトグルボタン -->
+  <button id="toggle-info" class="hidden">📖 操作方法を表示</button>
+
+  <!-- 操作方法パネル -->
   <div id="info">
+    <button class="close-btn" onclick="toggleInfo()">×</button>
     <h3>🎮 操作方法</h3>
     <ul>
-      <li><strong>通常ドラッグ:</strong> 球B回転 → 球A回転</li>
+      <li><strong>通常ドラッグ:</strong> 両方操作可能→両方回転、片方→単独回転</li>
       <li><span class="key">Shift</span> + ドラッグ: 球A単独回転</li>
       <li><span class="key">Ctrl</span> + ドラッグ: 球B単独回転</li>
-      <li><span class="key">Alt</span> + ドラッグ: 両方同時回転</li>
+      <li><span class="key">H</span> キー: このパネルの表示/非表示</li>
       <li><strong>マウスホイール:</strong> ズーム</li>
     </ul>
-    <p><strong>📱 タッチ:</strong> シングルタッチで回転、ピンチでズーム</p>
-    <p><strong>⚙️ GUI:</strong> 右上のパネルで詳細設定</p>
+    <p><strong>📱 タッチ:</strong> 両方操作可能なら両方回転、ピンチでズーム</p>
+    <p><strong>⚙️ GUI:</strong> 右上のパネルで球の固定・色変更・リセット等</p>
   </div>
 
   <script src="js/three.min.js"></script>
   <script src="js/dat.gui.min.js"></script>
+
+  <script>
+    // 操作方法パネルの表示/非表示を切り替える関数
+    function toggleInfo() {
+      const infoPanel = document.getElementById('info');
+      const toggleButton = document.getElementById('toggle-info');
+
+      if (infoPanel.classList.contains('hidden')) {
+        infoPanel.classList.remove('hidden');
+        toggleButton.classList.add('hidden');
+      } else {
+        infoPanel.classList.add('hidden');
+        toggleButton.classList.remove('hidden');
+      }
+    }
+
+    // トグルボタンにクリックイベントを追加
+    document.getElementById('toggle-info').addEventListener('click', toggleInfo);
+  </script>
+
   <script src="js/04.js"></script>
 </body>
 

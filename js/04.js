@@ -21,8 +21,6 @@ const guiParams = {
   showSphereB: true,
   lineColorA: '#00ff00',
   lineColorB: '#0000ff',
-  sphereAEnabled: true,
-  sphereBEnabled: true,
   lockSphereA: false,
   lockSphereB: false,
   resetSphereA: function () { resetSphere('A'); },
@@ -55,9 +53,7 @@ displayFolder.addColor(guiParams, 'lineColorB').name('球B線色').onChange((v) 
 });
 displayFolder.open();
 
-const controlFolder = gui.addFolder('操作設定');
-controlFolder.add(guiParams, 'sphereAEnabled').name('球A操作有効');
-controlFolder.add(guiParams, 'sphereBEnabled').name('球B操作有効');
+const controlFolder = gui.addFolder('固定設定');
 controlFolder.add(guiParams, 'lockSphereA').name('球A固定');
 controlFolder.add(guiParams, 'lockSphereB').name('球B固定');
 controlFolder.open();
@@ -200,8 +196,7 @@ const rotationSpeed = 0.005;
 // キーボード状態の管理
 const keys = {
   shift: false,
-  ctrl: false,
-  alt: false
+  ctrl: false
 };
 
 // キーボードイベントリスナー
@@ -213,8 +208,22 @@ document.addEventListener('keydown', (e) => {
     case 'Control':
       keys.ctrl = true;
       break;
-    case 'Alt':
-      keys.alt = true;
+    case 'h':
+    case 'H':
+      console.log('press h')
+      // 操作方法パネルの表示/非表示を切り替え
+      const infoPanel = document.getElementById('info');
+      const toggleButton = document.getElementById('toggle-info');
+
+      if (infoPanel && toggleButton) {
+        if (infoPanel.classList.contains('hidden')) {
+          infoPanel.classList.remove('hidden');
+          toggleButton.classList.add('hidden');
+        } else {
+          infoPanel.classList.add('hidden');
+          toggleButton.classList.remove('hidden');
+        }
+      }
       break;
   }
 });
@@ -227,9 +236,6 @@ document.addEventListener('keyup', (e) => {
     case 'Control':
       keys.ctrl = false;
       break;
-    case 'Alt':
-      keys.alt = false;
-      break;
   }
 });
 
@@ -239,18 +245,17 @@ renderer.domElement.addEventListener('mousedown', (e) => {
   previousMousePosition = { x: e.clientX, y: e.clientY };
 
   // 操作対象を決定
-  if (keys.shift && guiParams.sphereAEnabled && !guiParams.lockSphereA) {
+  if (keys.shift && !guiParams.lockSphereA) {
     dragTarget = 'sphereA';
-  } else if (keys.ctrl && guiParams.sphereBEnabled && !guiParams.lockSphereB) {
+  } else if (keys.ctrl && !guiParams.lockSphereB) {
     dragTarget = 'sphereB';
-  } else if (keys.alt && guiParams.sphereAEnabled && guiParams.sphereBEnabled &&
-    !guiParams.lockSphereA && !guiParams.lockSphereB) {
-    dragTarget = 'both';
   } else {
-    // デフォルトの動作：優先順位に基づいて決定
-    if (guiParams.sphereBEnabled && !guiParams.lockSphereB) {
+    // デフォルトの動作：両方操作可能なら両方回転、そうでなければ優先順位に基づいて決定
+    if (!guiParams.lockSphereA && !guiParams.lockSphereB) {
+      dragTarget = 'both';
+    } else if (!guiParams.lockSphereB) {
       dragTarget = 'sphereB';
-    } else if (guiParams.sphereAEnabled && !guiParams.lockSphereA) {
+    } else if (!guiParams.lockSphereA) {
       dragTarget = 'sphereA';
     } else {
       dragTarget = null;
@@ -317,10 +322,12 @@ renderer.domElement.addEventListener('touchstart', (e) => {
     isDragging = true;
     previousMousePosition = { x: e.touches[0].clientX, y: e.touches[0].clientY };
 
-    // タッチでのデフォルト操作対象
-    if (guiParams.sphereBEnabled && !guiParams.lockSphereB) {
+    // タッチでのデフォルト操作対象：両方操作可能なら両方回転
+    if (!guiParams.lockSphereA && !guiParams.lockSphereB) {
+      touchTarget = 'both';
+    } else if (!guiParams.lockSphereB) {
       touchTarget = 'sphereB';
-    } else if (guiParams.sphereAEnabled && !guiParams.lockSphereA) {
+    } else if (!guiParams.lockSphereA) {
       touchTarget = 'sphereA';
     }
   } else if (e.touches.length === 2) {
@@ -349,6 +356,11 @@ renderer.domElement.addEventListener('touchmove', (e) => {
     } else if (touchTarget === 'sphereB') {
       latitudeLines.rotation.x += deltaX;
       latitudeLines.rotation.y += deltaY;
+    } else if (touchTarget === 'both') {
+      ellipsesGroup.rotation.x += deltaX;
+      ellipsesGroup.rotation.y += deltaY;
+      latitudeLines.rotation.x += deltaX;
+      latitudeLines.rotation.y += deltaY;
     }
 
     previousMousePosition = { x: e.touches[0].clientX, y: e.touches[0].clientY };
@@ -374,19 +386,20 @@ renderer.domElement.addEventListener('touchend', () => {
 console.log(`
 === 04.js 操作方法 ===
 マウス操作:
-- 通常ドラッグ: 球B回転（球B操作が有効な場合）、無効なら球A回転
-- Shift + ドラッグ: 球A単独回転
-- Ctrl + ドラッグ: 球B単独回転  
-- Alt + ドラッグ: 両方同時回転
+- 通常ドラッグ: 両方操作可能なら両方回転、そうでなければ球B優先→球A
+- Shift + ドラッグ: 球A単独回転（球A固定時は無効）
+- Ctrl + ドラッグ: 球B単独回転（球B固定時は無効）
 - マウスホイール: ズーム
 
 タッチ操作:
-- シングルタッチドラッグ: 球B回転（球B操作が有効な場合）、無効なら球A回転
+- シングルタッチドラッグ: 両方操作可能なら両方回転、そうでなければ球B優先→球A
 - ピンチ: ズーム
+
+キーボード:
+- H キー: 操作方法パネルの表示/非表示切り替え
 
 GUI設定:
 - 各球体の表示/非表示
-- 各球体の操作有効/無効
 - 各球体の固定/解除
 - 色変更
 - リセット機能
