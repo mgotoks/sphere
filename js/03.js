@@ -1,6 +1,7 @@
 const scene0 = new THREE.Scene();
 const scene1 = new THREE.Scene();
 const scene2 = new THREE.Scene();
+const scene3 = new THREE.Scene(); // マーカー用のシーン
 
 const camera0 = new THREE.PerspectiveCamera(30,
   window.innerWidth / window.innerHeight, 0.1, 1000);
@@ -19,6 +20,8 @@ const guiParams = {
   cameraFov: camera0.fov,
   showSphereA: true,
   showSphereB: true,
+  showMarkers: true,
+  markerSize: 0.2,
   lineColorA: '#00ff00',
   lineColorB: '#0000ff',
   linesCountA: 18,
@@ -47,6 +50,12 @@ displayFolder.add(guiParams, 'showSphereA').name('球A表示').onChange((v) => {
 });
 displayFolder.add(guiParams, 'showSphereB').name('球B表示').onChange((v) => {
   latitudeLines.visible = v;
+});
+displayFolder.add(guiParams, 'showMarkers').name('マーカー表示').onChange((v) => {
+  intersectionMarkersGroup.visible = v;
+});
+displayFolder.add(guiParams, 'markerSize', 0.05, 1.0).step(0.05).name('マーカーサイズ').onChange((v) => {
+  regenerateMarkers();
 });
 displayFolder.addColor(guiParams, 'lineColorA').name('球A線色').onChange((v) => {
   curveMaterial1.color.setHex(parseInt(v.replace('#', '0x')));
@@ -164,11 +173,120 @@ function generateSphereA(linesCount) {
 function regenerateSphereA() {
   const currentRotation = ellipsesGroup.rotation.clone();
   generateSphereA(guiParams.linesCountA);
+  createIntersectionMarkers();
   ellipsesGroup.rotation.copy(currentRotation);
 }
 
 // 初期生成
 generateSphereA(guiParams.linesCountA);
+
+// 球Aの交点マーカーを追加
+const intersectionMarkersGroup = new THREE.Group();
+const intersectionColors = [
+  0xff0000,  // 1: 赤
+  0xffa500,  // 2: オレンジ
+  0x8800ff,  // 3: 紫
+  0x00aa00,  // 4: 濃い緑（白文字が読みやすい）
+  0xff00ff,  // 5: マゼンタ
+  0x00ffff   // 6: シアン
+];
+const intersectionLabels = ['1', '2', '3', '4', '5', '6'];
+
+// 6つの交点の位置 (X軸の正負、Y軸の正負、Z軸の正負)
+const intersectionPositions = [
+  new THREE.Vector3(sphereRadius, 0, 0),  // X+
+  new THREE.Vector3(-sphereRadius, 0, 0), // X-
+  new THREE.Vector3(0, sphereRadius, 0),  // Y+
+  new THREE.Vector3(0, -sphereRadius, 0), // Y-
+  new THREE.Vector3(0, 0, sphereRadius),  // Z+
+  new THREE.Vector3(0, 0, -sphereRadius)  // Z-
+];
+
+// 各交点にマーカーを作成
+function createIntersectionMarkers() {
+  // 既存のマーカーを削除
+  while (intersectionMarkersGroup.children.length > 0) {
+    const child = intersectionMarkersGroup.children[0];
+    intersectionMarkersGroup.remove(child);
+    if (child.geometry) child.geometry.dispose();
+    if (child.material) {
+      if (child.material.map) child.material.map.dispose();
+      child.material.dispose();
+    }
+  }
+
+  intersectionPositions.forEach((position, index) => {
+    // Canvasで円とテキストを描画
+    const canvas = document.createElement('canvas');
+    const context = canvas.getContext('2d');
+    canvas.width = 256;
+    canvas.height = 256;
+
+    // 背景を透明にする
+    context.clearRect(0, 0, canvas.width, canvas.height);
+
+    // 円を描画
+    const centerX = 128;
+    const centerY = 128;
+    const radius = 100;
+
+    context.beginPath();
+    context.arc(centerX, centerY, radius, 0, 2 * Math.PI);
+    context.fillStyle = '#' + intersectionColors[index].toString(16).padStart(6, '0');
+    context.fill();
+
+    // 円の縁を描画
+    context.strokeStyle = '#ffffff';
+    context.lineWidth = 4;
+    context.stroke();
+
+    // テキストを描画
+    context.fillStyle = '#ffffff';
+    context.font = 'Bold 100px Arial';
+    context.textAlign = 'center';
+    context.textBaseline = 'middle';
+    context.fillText(intersectionLabels[index], centerX, centerY);
+
+    // テクスチャを作成
+    const texture = new THREE.CanvasTexture(canvas);
+
+    // 円形のジオメトリを作成（両面表示）
+    const circleGeometry = new THREE.CircleGeometry(guiParams.markerSize, 32);
+    const circleMaterial = new THREE.MeshBasicMaterial({
+      map: texture,
+      transparent: true,
+      side: THREE.DoubleSide,
+      depthTest: true,  // 深度テストを有効にして球の裏のマーカーを隠す
+      depthWrite: true
+    });
+    const circle = new THREE.Mesh(circleGeometry, circleMaterial);
+
+    // 球の表面より少し外側に配置（球に埋もれないように）
+    const offset = 1.005;
+    const offsetPosition = position.clone().normalize().multiplyScalar(sphereRadius * offset);
+    circle.position.copy(offsetPosition);
+
+    // 円を球の中心から外側に向ける（球面に沿うように）
+    circle.lookAt(new THREE.Vector3(0, 0, 0));
+    // 180度回転させて外側を向くようにする
+    circle.rotateY(Math.PI);
+
+    intersectionMarkersGroup.add(circle);
+  });
+
+  console.log('マーカー作成完了:', intersectionMarkersGroup.children.length, '個');
+}
+
+// マーカーを再生成する関数
+function regenerateMarkers() {
+  const currentRotation = intersectionMarkersGroup.rotation.clone();
+  createIntersectionMarkers();
+  intersectionMarkersGroup.rotation.copy(currentRotation);
+}
+
+createIntersectionMarkers();
+// マーカーをellipsesGroupではなくscene3に追加（最前面に表示するため）
+scene3.add(intersectionMarkersGroup);
 scene1.add(ellipsesGroup);
 
 // 球Bの線（緯度・経度線グループ）を生成
@@ -563,6 +681,9 @@ console.log(`
 function animate() {
   requestAnimationFrame(animate);
 
+  // マーカーの回転を球Aの回転に同期
+  intersectionMarkersGroup.rotation.copy(ellipsesGroup.rotation);
+
   renderer.clear();
   renderer.render(scene0, camera0);
 
@@ -571,6 +692,11 @@ function animate() {
   }
   if (guiParams.showSphereB) {
     renderer.render(scene2, camera0);
+  }
+
+  // マーカーを最後にレンダリング（最前面に表示）
+  if (guiParams.showSphereA && guiParams.showMarkers) {
+    renderer.render(scene3, camera0);
   }
 }
 
